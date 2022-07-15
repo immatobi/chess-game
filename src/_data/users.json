@@ -1,0 +1,15 @@
+[
+    {
+        "firstName": "Super",
+        "lastName": "Administrator",
+        "email": "admin@chess.co",
+        "password": "#_chessAdmin1@",
+        "isSuper": true,
+        "isActivated": true,
+        "isAdmin": false,
+        "isPlayer": false,
+        "isManager": false,
+        "isUser": true,
+        "isActive": true
+    }
+]

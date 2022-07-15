@@ -1,0 +1,31 @@
+[
+    {
+        "name": "superadmin",
+        "description": "Superadmin has all access to perform all operations on the platform ",
+        "slug": "super-admin"
+    },
+
+    {
+        "name": "admin",
+        "description": "admin has limited access to perform operations on the platform",
+        "slug": "admin"
+    },
+
+    {
+        "name": "player",
+        "description": "player plays games",
+        "slug": "player"
+    },
+
+    {
+        "name": "manager",
+        "description": "manager manages games",
+        "slug": "manager"
+    },
+    
+    {
+        "name": "user",
+        "description": "everyone on the platform are considered to be a user",
+        "slug": "user"
+    }
+]
