@@ -80,6 +80,69 @@ export interface IKycDoc extends Document{
 
 }
 
+export interface IRoomDoc extends Document{
+
+    name: string;
+    roomID: string;
+    description: string;
+    slug: string;
+    password: string;
+
+    manager: ObjectId | any;
+    owner: ObjectId | any;
+    players: Array<ObjectId | any>;
+    chat: ObjectId | any;
+
+    // time stamps
+    createdAt: string;
+    updatedAt: string;
+    _version: number;
+    _id: mongoose.Schema.Types.ObjectId;
+    id: mongoose.Schema.Types.ObjectId;
+
+    // functions
+    findByName(name: string): IRoleDoc;
+    getAllRooms(): any
+
+}
+
+export interface IChatDoc extends Document{
+
+    chatID: string;
+    isRoom: boolean;
+
+    room: ObjectId | any;
+    partyA: ObjectId | any;
+    partyB: ObjectId | any;
+
+    messages: Array<ObjectId | any>;
+
+    // time stamps
+    createdAt: string;
+    updatedAt: string;
+    _version: number;
+    _id: mongoose.Schema.Types.ObjectId;
+    id: mongoose.Schema.Types.ObjectId;
+    
+}
+
+export interface IMessageDoc extends Document{
+
+    message: string;
+
+    sender: ObjectId | any;
+    receiver: ObjectId | any;
+    chat: ObjectId | any;
+
+    // time stamps
+    createdAt: string;
+    updatedAt: string;
+    _version: number;
+    _id: ObjectId;
+    id: ObjectId;
+
+}
+
 export interface IRoleDoc extends Document{
 
     name: string;
@@ -139,6 +202,10 @@ export interface IUserDoc extends Document {
 	savedPassword: string;
 	userType: string;
 	points: number;
+    rank: string;
+    username: string;
+    socketId: string | any;
+    room: ObjectId | any;
 
 	status: {
 		profile: string,
@@ -171,6 +238,7 @@ export interface IUserDoc extends Document {
 	// relationships
 	country: ObjectId | any;
 	roles: Array<ObjectId | any>;
+    chats: Array<ObjectId | any>;
 	kyc: ObjectId | any;
 	verification: ObjectId | any;
 
@@ -228,5 +296,20 @@ export interface IAddressKyc {
     address: string,
     postalCode: string, 
     utilityDoc: string, 
+}
+
+export interface IMessage {
+    sender: ObjectId,
+    receiver: ObjectId,
+    message: string,
+    type: string,
+    chatId: ObjectId | any,
+    roomId: ObjectId
+}
+
+export interface IChatMessage {
+    sender: ObjectId,
+    receiver: ObjectId,
+    message: string
 }
 

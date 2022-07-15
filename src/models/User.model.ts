@@ -32,6 +32,9 @@ interface IUserDoc extends IUserModel, mongoose.Document {
 	savedPassword: string;
 	userType: string;
 	points: number;
+	rank: string;
+	username: string
+	socketId: string | any;
 
 	status: {
 		profile: string,
@@ -64,8 +67,10 @@ interface IUserDoc extends IUserModel, mongoose.Document {
 	// relationships
 	country: mongoose.Schema.Types.ObjectId | any;
 	roles: Array<mongoose.Schema.Types.ObjectId | any>;
+	chats: Array<ObjectId | any>;
 	kyc: mongoose.Schema.Types.ObjectId | any;
 	verification: mongoose.Schema.Types.ObjectId | any;
+	room: ObjectId | any;
 
     // time stamps
     createdAt: string;
@@ -101,6 +106,12 @@ const UserSchema = new mongoose.Schema(
         lastName: {
             type: String
         },
+
+		username:{
+			type: String,
+			unique: [true, 'username already exist'],
+			required: [true, 'username is required']
+		},
 
         phoneNumber: {
 			type: String
@@ -139,7 +150,7 @@ const UserSchema = new mongoose.Schema(
 
 		userType: {
 			type: String,
-			enum: ['superadmin','admin','business','team','user']
+			enum: ['superadmin','admin','player','manager','user']
 		},
 
 		status: {
@@ -160,6 +171,16 @@ const UserSchema = new mongoose.Schema(
 		points: {
 			type: Number,
 			default: 1000
+		},
+
+		rank: {
+			type: String,
+			enum: ['beginner', 'intermediate', 'advanced', 'expert'],
+			default: 'beginner'
+		},
+
+		socketId: {
+			type: mongoose.Schema.Types.Mixed
 		},
 
         activationToken: String,
@@ -224,12 +245,24 @@ const UserSchema = new mongoose.Schema(
 			ref: 'Country',
 		},
 
+		room: {
+			type: mongoose.Schema.Types.Mixed,
+			ref: 'Room',
+		},
+
         roles: [
 			{
 				type: mongoose.Schema.Types.ObjectId,
 				ref: 'Role',
 				required: true,
 			},
+		],
+
+		chats: [
+			{
+				type: mongoose.Schema.Types.ObjectId,
+				ref: 'Chat'
+			}
 		],
 
 		kyc: {

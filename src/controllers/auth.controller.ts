@@ -37,7 +37,7 @@ declare global {
 // @access  Public
 export const register = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
 
-    const { email, password, phoneNumber, phoneCode, callback } = req.body;
+    const { username, email, password, phoneNumber, phoneCode, callback, userType } = req.body;
 
     // find the user role
     const role = await Role.findOne({ name: 'user' });
@@ -51,6 +51,12 @@ export const register = asyncHandler(async (req: Request, res: Response, next: N
 
     if(exist){
         return next(new ErrorResponse('Error', 400, ['email already exist, use another email']));
+    }
+
+	const _existUname = await User.findOne({ username: username });
+
+    if(_existUname){
+        return next(new ErrorResponse('Error', 400, ['username already exist, use another username']));
     }
 
     // validate phone code
@@ -86,23 +92,21 @@ export const register = asyncHandler(async (req: Request, res: Response, next: N
 
     // create the user
     const user = await User.create({
-        email,
+        username,
+		email,
         password,
 		passwordType: 'self',
 		savedPassword: password,
 		phoneNumber: phoneStr + phoneNumber.substring(1),
 		phoneCode: phoneStr,
-		userType: 'business',
+		userType: userType,
         isSuper: false,
 		isActivated: false,
 		isAdmin: false,
-		isBusiness: true,
-		isTeam: false,
 		isUser: true,
 		isActive: true
     });
 
-	const bizRole = await Role.findOne({ name: 'business' });
 	// create verification
 	const verification = await Verification.create({
 
@@ -117,10 +121,20 @@ export const register = asyncHandler(async (req: Request, res: Response, next: N
 	})
 
 	user.roles.push(role._id);
-	user.roles.push(bizRole?._id);
 	user.verification = verification._id;
 	await user.save();
 
+	if(userType === 'player'){
+		const role = await Role.findOne({ name: 'player' });
+		user.roles.push(role?._id);
+		await user.save();
+	}
+
+	if(userType === 'manager'){
+		const role = await Role.findOne({ name: 'manager' });
+		user.roles.push(role?._id);
+		await user.save();
+	}
 
     // send emails, publish nats and initialize notification
     if(user){
@@ -894,7 +908,7 @@ const sendTokenResponse = async (user: any, message: string, statusCode: number,
 
 	const options = {
 		expires: new Date(
-			Date.now() + 70 * 24 * 60 * 60 * 1000
+			Date.now() + 6 * 30 * 24 * 60 * 60 * 1000
 		),
 		httpOnly: true,
 		secure: false
@@ -935,6 +949,11 @@ const sendTokenResponse = async (user: any, message: string, statusCode: number,
 			email: _user.verification.email,
 		}: null
 	}
+
+	// set user rank cookie
+	// set user point cookie
+	res.cookie('rank', _user.rank, options);
+	res.cookie('points', _user.points, options);
 
 	res.status(statusCode).cookie('token', token, options).json({
 		error: false,
