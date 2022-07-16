@@ -48,14 +48,22 @@ ioServer.on('connection', (socket) => {
     // connect user
     socket.on("user-connected", async (userId: ObjectId, roomId: ObjectId | null = null) => {
 
-        UserService.addSocketUser(socketId, userId, roomId);
+        if(roomId !== null){
 
-        // emit total number of users
-        const total = await redis.fetchData(CacheKeys.TotalPlayers);
-        socket.emit('get-total-users', parseInt(total));
+            socket.join(roomId.toString());
+            UserService.addSocketUser(socketId, userId, roomId);
+
+            // emit total number of users
+            const total = await redis.fetchData(CacheKeys.TotalPlayers);
+            socket.emit('get-total-users', parseInt(total));
+
+        }
+
+        
 
     })
 
+    // send message (chat)
     socket.on('send-message', async (data: IMessage) => {
 
         const receiver = await User.findOne({ _id: data.receiver });
