@@ -23,7 +23,7 @@ router.get('/', (req: Request, res: Response, next: NextFunction) => {
         errors: [],
         message: 'successful',
         data: {
-            name: 'xpresschain-identity-service',
+            name: 'chess-game-api',
             version: '1.0.0'
         },
         status: 200

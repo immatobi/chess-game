@@ -1,7 +1,7 @@
 {
-  "name": "xpresschain-identity-service",
+  "name": "chess-game",
   "version": "1.0.0",
-  "description": "xpresschain identity service",
+  "description": "chess-game api",
   "main": "server.js",
   "directories": {
     "test": "./tests"
