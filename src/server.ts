@@ -12,6 +12,7 @@ import redis from './middleware/redis.mw'
 import { CacheKeys } from './utils/cache.util'
 import { IMessage } from './utils/types.util'
 import ChatService from './services/chat.sv'
+import * as http from 'http'
 
 const connect = async (): Promise<void> => {
 
@@ -34,11 +35,14 @@ const connect = async (): Promise<void> => {
 
 connect();  // initialize connection and seed data
 
+// create server
+const server = http.createServer(app);
+
 // define PORT
 const PORT = process.env.PORT || 5000;
 
 // define socket server
-const ioServer = new Server(parseInt(PORT.toString()), { cors: { origin: '*' } })
+const ioServer = new Server(server);
 
 ioServer.on('connection', (socket) => {
 
@@ -142,7 +146,7 @@ ioServer.on('connection', (socket) => {
 
 })
 
-const server = app.listen(PORT, () => {
+server.listen(PORT, () => {
     console.log(colors.yellow.bold(`Chess server running in ${process.env.NODE_ENV} on port ${PORT}`));
 });
 
