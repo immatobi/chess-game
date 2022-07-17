@@ -42,7 +42,12 @@ const server = http.createServer(app);
 const PORT = process.env.PORT || 5000;
 
 // define socket server
-const ioServer = new Server(server);
+const ioServer = new Server(server, { 
+    cors: {
+        origin: '*',
+        methods: ['GET', 'POST', 'OPTIONS', 'PUT', 'PATCH', 'DELETE']
+    }
+ });
 
 ioServer.on('connection', (socket) => {
 
