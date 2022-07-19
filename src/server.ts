@@ -133,7 +133,11 @@ ioServer.on('connection', (socket) => {
 
             if(data.type === 'private'){
 
-                socket.to(socketId).emit("receive-message", {
+                // socket.to(socketId).emit("receive-message", {
+                //     message: data.message
+                // })
+
+                socket.broadcast.emit("receive-message", {
                     message: data.message
                 })
                 
