@@ -129,6 +129,16 @@ ioServer.on('connection', (socket) => {
 
             }
 
+        }else{
+
+            if(data.type === 'private'){
+
+                socket.to(socketId).emit("receive-message", {
+                    message: data.message
+                })
+                
+            }
+
         }
 
     });
