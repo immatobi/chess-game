@@ -68,16 +68,38 @@ ioServer.on('connection', (socket) => {
 
         }
 
-        
-
     })
+
+    // join room
+    socket.on('join-room', async (data) => {
+        socket.join(data.roomId);
+    });
 
     // send message (chat)
     socket.on('send-message', async (data: IMessage) => {
 
-        socket.broadcast.emit("receive-message", {
-            message: data.message
-        })
+        if(data.type === 'private'){
+
+            // publish the message first
+           await socket.to(socketId).emit("receive-message", {
+                message: data.message
+            })
+
+            // do other things
+
+        }
+
+        else if(data.type === 'room'){
+
+
+
+        }
+
+        else{
+
+
+
+        }
 
         // const receiver = await User.findOne({ _id: data.receiver });
         // const sender = await User.findOne({ _id: data.sender });
