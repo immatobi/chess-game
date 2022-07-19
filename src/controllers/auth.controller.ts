@@ -20,7 +20,6 @@ import Role from '../models/Role.model'
 // nats 
 import nats from '../events/nats';
 import UserCreated from '../events/publishers/user-created';
-import Verification from '../models/Verification.model';
 
 
 declare global {
@@ -37,7 +36,7 @@ declare global {
 // @access  Public
 export const register = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
 
-    const { username, email, password, phoneNumber, phoneCode, callback, userType } = req.body;
+    const { username, email, password, userType } = req.body;
 
     // find the user role
     const role = await Role.findOne({ name: 'user' });
@@ -59,29 +58,6 @@ export const register = asyncHandler(async (req: Request, res: Response, next: N
         return next(new ErrorResponse('Error', 400, ['username already exist, use another username']));
     }
 
-    // validate phone code
-    if(!phoneCode){
-        return next(new ErrorResponse('Error', 400, ['phone code is required']));
-    }
-
-    if(!strIncludesEs6(phoneCode, '+')){
-        return next(new ErrorResponse('Error', 400, ['phone code is must include \'+\' sign']));
-    }
-
-	// format phone number
-	let phoneStr: string;
-	if(strIncludesEs6(phoneCode, '-')){
-		phoneStr = phoneCode.substring(3);
-	}else{
-		phoneStr = phoneCode.substring(1);
-	}
-
-	const phoneExists = await User.findOne({ phoneNumber: phoneStr + phoneNumber.substring(1) });
-
-	if(phoneExists){
-		return next(new ErrorResponse('Error', 400, ['phone number already exists']));
-	}
-
 	// match user password with regex
 	const match =  /^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[^\w\s]).{8,}$/;
 	const matched: boolean = match.test(password);
@@ -97,8 +73,8 @@ export const register = asyncHandler(async (req: Request, res: Response, next: N
         password,
 		passwordType: 'self',
 		savedPassword: password,
-		phoneNumber: phoneStr + phoneNumber.substring(1),
-		phoneCode: phoneStr,
+		phoneNumber: '',
+		phoneCode: '',
 		userType: userType,
         isSuper: false,
 		isActivated: false,
@@ -107,21 +83,7 @@ export const register = asyncHandler(async (req: Request, res: Response, next: N
 		isActive: true
     });
 
-	// create verification
-	const verification = await Verification.create({
-
-		basic: 'pending',
-		ID: 'pending',
-		address: 'pending',
-		face: 'pending',
-		sms: false,
-		email: false,
-		user: user._id
-
-	})
-
 	user.roles.push(role._id);
-	user.verification = verification._id;
 	await user.save();
 
 	if(userType === 'player'){
@@ -139,69 +101,27 @@ export const register = asyncHandler(async (req: Request, res: Response, next: N
     // send emails, publish nats and initialize notification
     if(user){
 
-        try {
-
-            // send welcome email data
-            let emailData = {
-                template: 'welcome',
-                email: email,
-                preheaderText: 'welcome',
-                emailTitle: 'Welcome to Checkaam',
-                emailSalute: `Hello ${user.firstName},`,
-                bodyOne: `
-				We\'re glad you signed up on Checkaam. Please login to your dashboard by clicking the button below.
-				`,
-                buttonUrl: `${callback}`,
-                buttonText: 'Login',
-                fromName: process.env.FROM_NAME
-            }
-			
-            await sendGrid(emailData);
-
-            // // send activation email
-            const activateToken = user.getActivationToken();
-            await user.save({ validateBeforeSave: false });
-
-            const activateUrl = `${callback}/${activateToken}`;
-
-            let activateData = {
-                template: 'welcome',
-                email: email,
-                preheaderText: 'activate account',
-                emailTitle: 'Activate your account',
-                emailSalute: `Hello ${user.firstName},`,
-                bodyOne: 'Activate your Checkaam account. Click the button below to activate your account',
-                buttonUrl: `${activateUrl}`,
-                buttonText: 'Activate Account',
-                fromName: process.env.FROM_NAME
-            }
-            await sendGrid(activateData);
-
-            // send response to client
-            res.status(200).json({
-                error: false,
-                errors: [],
-                data: { 
-                    email: user.email,
-                    phoneNumber: user.phoneNumber,
-                    phoneCode: phoneCode,
-                    _id: user._id,
-                    id: user.id
-                },
-                message: 'successful',
-                status: 200
-            })
-
-			// log user activity
-			userLogger.info(`New user created`, {
-				_id: user._id,
+       // send response to client
+	   res.status(200).json({
+			error: false,
+			errors: [],
+			data: { 
 				email: user.email,
-				userType: user.userType
-			});
-            
-        } catch (err) {
-            return next(new ErrorResponse('Error', 500, [`${err}`]));
-        }
+				phoneNumber: user.phoneNumber,
+				phoneCode: '',
+				_id: user._id,
+				id: user.id
+			},
+			message: 'successful',
+			status: 200
+		})
+
+		// log user activity
+		userLogger.info(`New user created`, {
+			_id: user._id,
+			email: user.email,
+			userType: user.userType
+		});
 
 
     }else{
@@ -216,7 +136,7 @@ export const register = asyncHandler(async (req: Request, res: Response, next: N
 // @access      Public
 export const login = asyncHandler(async (req: Request, res:Response, next: NextFunction) => {
 
-	const { email, password, code } = req.body;
+	const { email, password } = req.body;
 
 	// validate email and password
 	if(!email && !password){
@@ -234,7 +154,7 @@ export const login = asyncHandler(async (req: Request, res:Response, next: NextF
 	}
 
 	// check for user
-	const user = await User.findOne({ email: email }).select('+password +passwordType').populate([{path: 'verification'}]);
+	const user = await User.findOne({ email: email }).select('+password +passwordType');
 
 	if(!user){
 		return next(new ErrorResponse('Error', 403, ['invalid credentials']))
@@ -284,93 +204,23 @@ export const login = asyncHandler(async (req: Request, res:Response, next: NextF
 
 	if(!user.isSuper){
 
-		if(!code && !user.verification.email && !user.verification.sms){
+		user.emailCode = undefined;
+		user.emailCodeExpire = undefined;
+		user.loginLimit = 0;
+		user.isLocked = false;
+		await user.save();
 
-			user.emailCode = undefined;
-			user.emailCodeExpire = undefined;
-			user.loginLimit = 0;
-			user.isLocked = false;
-			await user.save();
+		// save request user object
+		req.user = user;
 
-			// save request user object
-			req.user = user;
-		
-			const message = 'successful';
-			sendTokenResponse(user, message, 200, res);
-
-		}
-
-		// generate email verification code
-		if(!code && user.verification.email){
-
-			// generate otp code
-			const gencode = await generate(6, false);
-			user.emailCode = gencode.toString();
-			user.emailCodeExpire = Date.now() + 30 * 60 * 1000; // 30 minutes // generates timestamp
-			await user.save();
-
-			// send welcome email data
-			let emailData = {
-				template: 'email-verify',
-				email: user.email,
-				preheaderText: 'welcome',
-				emailTitle: 'Email Verification',
-				emailSalute: `Hello ${user.firstName},`,
-				bodyOne: `
-				Please use the code below to verify your email.
-				If this is not you, reach out to us at admin@checkaam.com and ignore this email.
-				`,
-				bodyTwo: gencode,
-				fromName: process.env.FROM_NAME
-			}
-			
-			await sendGrid(emailData);
-
-			res.status(206).json({
-				error: false,
-				errors: ['email verification is required'],
-				data: null,
-				message: 'successful',
-				status: 206
-			})
-
-		}
-
-		if(code){
-
-			// check for email verification
-			if(user.verification.email){
-
-				const today = Date.now(); // get timestamp from today's date
-				const valid = await User.findOne({ email: user.email , emailCode: code.toString(), emailCodeExpire: { $gt: today } })
-
-				if(!valid){
-					return next(new ErrorResponse('Error!', 403, ['invalid verification code']))
-				}
-
-				user.emailCode = undefined;
-				user.emailCodeExpire = undefined;
-				await user.save();
-
-			}
-
-			user.loginLimit = 0;
-			user.isLocked = false;
-			await user.save();
-		
-			// save request user object
-			req.user = user;
-
-			// log user activity
-			userLogger.info(`User logged in [admin]`, {
-				_id: user._id,
-				email: user.email
-			});
-		
-			const message = 'successful';
-			sendTokenResponse(user, message, 200, res);
-
-		}
+		// log user activity
+		userLogger.info(`User logged in [admin]`, {
+			_id: user._id,
+			email: user.email
+		});
+	
+		const message = 'successful';
+		sendTokenResponse(user, message, 200, res);
 
 	}
 
@@ -484,8 +334,6 @@ export const getUser = asyncHandler(async (req: Request, res:Response, next: Nex
 
 	const _user = await User.findOne({ _id: user._id}).populate([ 
 		{ path: 'roles', select: '_id name', },
-		{ path: 'verification' },
-		{ path: 'kyc' },
 		{ path: 'country' },
 	 ]);
 
@@ -526,16 +374,6 @@ export const updatePassword = asyncHandler(async (req: Request, res:Response, ne
 
 	if(!isMatched){
 		return next(new ErrorResponse('Error', 400, ['invalid credentials']))
-	}
-
-	const verification = await Verification.findOne({ _id: user.verification });
-
-	if(!verification){
-		return next(new ErrorResponse('Error', 500, ['kyc verification is required']))
-	}
-
-	if(verification.basic === 'pending'){
-		return next(new ErrorResponse('Error', 500, ['kyc basic verification is required']))
 	}
 
 	if(!code && !user.isSuper){
@@ -939,15 +777,7 @@ const sendTokenResponse = async (user: any, message: string, statusCode: number,
 		isUser: _user.isUser,
 		isActive: _user.isActive,
 		passwordType: _user.passwordType,
-		country: _user.country,
-		verification: !user.isSuper ? {
-			basic: _user.verification.basic,
-			ID: _user.verification.ID,
-			address: _user.verification.address,
-			face: _user.verification.face,
-			sms: _user.verification.sms,
-			email: _user.verification.email,
-		}: null
+		country: _user.country
 	}
 
 	// set user rank cookie

@@ -57,7 +57,7 @@ class BullQueue {
 
             // process the queue: call the callback function
             this.queue.process(async (job: any, done: any) => {
-                callback(job.data);
+                await callback(job.data);
                 done();
             });
 

@@ -81,7 +81,7 @@ ioServer.on('connection', (socket) => {
         if(data.type === 'private'){
 
             // publish the message first
-           await socket.to(socketId).emit("receive-message", {
+            socket.to(socketId).emit("receive-message", {
                 message: data.message
             })
 

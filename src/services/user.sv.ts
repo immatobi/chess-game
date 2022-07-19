@@ -6,7 +6,6 @@ import Axios from 'axios'
 
 import nats from '../events/nats'
 import UserCreated from '../events/publishers/user-created'
-import Verification from '../models/Verification.model';
 import Room from '../models/Room.model';
 import redis from '../middleware/redis.mw';
 import { CacheKeys } from '../utils/cache.util';
@@ -75,31 +74,6 @@ class UserService {
                 }, 8000)
 
             }
-
-        }
-
-    }
-
-    public async createVerificationData(userId: ObjectId, sms: boolean = false, email: boolean = false): Promise<void> {
-
-        const user = await User.findOne({ _id: userId });
-
-        if(user){
-
-            const verif = await Verification.create({
-
-                basic: 'pending',
-                ID: 'pending',
-                address: 'pending',
-                face: 'pending',
-                sms: sms,
-                email: email,
-                user: user._id
-
-            });
-
-            user.verification = verif._id;
-            await user.save();
 
         }
 

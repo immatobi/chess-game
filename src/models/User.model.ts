@@ -68,8 +68,6 @@ interface IUserDoc extends IUserModel, mongoose.Document {
 	country: mongoose.Schema.Types.ObjectId | any;
 	roles: Array<mongoose.Schema.Types.ObjectId | any>;
 	chats: Array<ObjectId | any>;
-	kyc: mongoose.Schema.Types.ObjectId | any;
-	verification: mongoose.Schema.Types.ObjectId | any;
 	room: ObjectId | any;
 
     // time stamps
@@ -264,16 +262,6 @@ const UserSchema = new mongoose.Schema(
 				ref: 'Chat'
 			}
 		],
-
-		kyc: {
-			type: mongoose.Schema.Types.ObjectId,
-			ref: 'Kyc',
-		},
-
-		verification: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'Verification'
-        },
 
     },
     {
