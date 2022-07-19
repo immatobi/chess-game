@@ -68,7 +68,8 @@ interface IUserDoc extends IUserModel, mongoose.Document {
 	country: mongoose.Schema.Types.ObjectId | any;
 	roles: Array<mongoose.Schema.Types.ObjectId | any>;
 	chats: Array<ObjectId | any>;
-	room: ObjectId | any;
+	game: ObjectId | any;
+    rooms: Array<ObjectId | any>;
 
     // time stamps
     createdAt: string;
@@ -243,7 +244,12 @@ const UserSchema = new mongoose.Schema(
 			ref: 'Country',
 		},
 
-		room: {
+		game: {
+			type: mongoose.Schema.Types.Mixed,
+			ref: 'Game',
+		},
+
+		rooms: {
 			type: mongoose.Schema.Types.Mixed,
 			ref: 'Room',
 		},

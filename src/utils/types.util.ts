@@ -90,7 +90,34 @@ export interface IRoomDoc extends Document{
 
     manager: ObjectId | any;
     owner: ObjectId | any;
-    players: Array<ObjectId | any>;
+    members: Array<ObjectId | any>;
+    chat: ObjectId | any;
+
+    // time stamps
+    createdAt: string;
+    updatedAt: string;
+    _version: number;
+    _id: mongoose.Schema.Types.ObjectId;
+    id: mongoose.Schema.Types.ObjectId;
+
+    // functions
+    findByName(name: string): IRoleDoc;
+    getAllRooms(): any
+
+}
+
+export interface IGameDoc extends Document{
+
+    name: string;
+    gameID: string;
+    description: string;
+    slug: string;
+
+    manager: ObjectId | any;
+    owner: ObjectId | any;
+    members: Array<ObjectId | any>;
+    playerA: ObjectId | any;
+    playerB: ObjectId | any;
     chat: ObjectId | any;
 
     // time stamps
@@ -111,7 +138,7 @@ export interface IChatDoc extends Document{
     chatID: string;
     isRoom: boolean;
 
-    room: ObjectId | any;
+    game: ObjectId | any;
     partyA: ObjectId | any;
     partyB: ObjectId | any;
 
@@ -205,7 +232,6 @@ export interface IUserDoc extends Document {
     rank: string;
     username: string;
     socketId: string | any;
-    room: ObjectId | any;
 
 	status: {
 		profile: string,
@@ -241,6 +267,8 @@ export interface IUserDoc extends Document {
     chats: Array<ObjectId | any>;
 	kyc: ObjectId | any;
 	verification: ObjectId | any;
+    game: ObjectId | any;
+    rooms: Array<ObjectId | any>;
 
     // time stamps
     createdAt: string;
@@ -299,17 +327,23 @@ export interface IAddressKyc {
 }
 
 export interface IMessage {
+    socketId: string,
     sender: ObjectId,
     receiver: ObjectId,
     message: string,
     type: string,
     chatId: ObjectId | any,
-    roomId: ObjectId
+    gameId: string
 }
 
 export interface IChatMessage {
     sender: ObjectId,
     receiver: ObjectId,
     message: string
+}
+
+export interface IGameData {
+    gameId: string,
+    socketId: string
 }
 

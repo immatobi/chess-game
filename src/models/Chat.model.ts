@@ -24,9 +24,9 @@ const ChatSchema = new mongoose.Schema (
             type: Boolean
         },
 
-        room: {
+        game: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'Room'
+            ref: 'Game'
         },
 
         messages: [

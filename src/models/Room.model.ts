@@ -39,17 +39,12 @@ const RoomSchema = new mongoose.Schema (
             ref: 'User'
         },
 
-        palyers: [
+        members: [
             {
                 type: mongoose.Schema.Types.ObjectId,
                 ref: 'User'
             }
         ],
-
-        chat: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'Chat'
-        }
 
     },
 

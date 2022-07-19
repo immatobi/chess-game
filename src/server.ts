@@ -10,7 +10,7 @@ import {ObjectId} from 'mongoose'
 import User from './models/User.model'
 import redis from './middleware/redis.mw'
 import { CacheKeys } from './utils/cache.util'
-import { IMessage } from './utils/types.util'
+import { IGameData, IMessage } from './utils/types.util'
 import ChatService from './services/chat.sv'
 import * as http from 'http'
 
@@ -55,137 +55,92 @@ ioServer.on('connection', (socket) => {
     let socketId = socket.id;
 
     // connect user
-    socket.on("user-connected", async (userId: ObjectId, roomId: ObjectId | null = null) => {
+    socket.on("user-connected", async (userId: ObjectId) => {
 
-        if(roomId !== null){
+       const socketUser = await UserService.addSocketUser(socketId, userId);
 
-            socket.join(roomId.toString());
-            UserService.addSocketUser(socketId, userId, roomId);
+        // broadcast total number of users
+        const total = await redis.fetchData(CacheKeys.TotalPlayers);
+        socket.broadcast.emit('get-total-users', parseInt(total));
 
-            // emit total number of users
-            const total = await redis.fetchData(CacheKeys.TotalPlayers);
-            socket.emit('get-total-users', parseInt(total));
-
-        }
+        // emit user socket id
+        socket.emit("get-user-socket", { socketId: socketUser.data.socketId, _id: socketUser.data._id })
 
     })
 
     // join room
-    socket.on('join-room', async (data) => {
-        socket.join(data.roomId);
+    socket.on('join-game', async (data: IGameData) => {
+
+        await socket.join(data.gameId);
+        await UserService.addUserGame(data.gameId, data.socketId)
+
+        // communicate
+        const user = await redis.fetchData(data.socketId);
+        socket.to(data.gameId).emit("user-joined", { _id: user._id, socketId: data.socketId })
+
     });
 
-    // send message (chat)
+    // join room
+    socket.on('leave-game', async (data: IGameData) => {
+
+        await socket.leave(data.gameId);
+        await UserService.removeUserGame(data.gameId, data.socketId);
+
+        // communicate
+        const user = await redis.fetchData(data.socketId);
+        socket.to(data.gameId).emit("user-left", { _id: user._id, socketId: data.socketId })
+
+    });
+
+    // (chat)
     socket.on('send-message', async (data: IMessage) => {
 
         if(data.type === 'private'){
 
             // publish the message first
-            socket.to(socketId).emit("receive-message", {
+            await socket.to(data.socketId).emit("receive-message", {
+                sender: data.sender,
+                receiver: data.receiver,
                 message: data.message
             })
 
-            // do other things
+            await ChatService.processChat(data);
 
         }
 
-        else if(data.type === 'room'){
+        else if(data.type === 'game'){
 
+            // publish the message first
+            await socket.to(data.gameId).emit("game-message", {
+                sender: data.sender,
+                receiver: data.receiver,
+                message: data.message
+            })
 
+            await ChatService.saveGameMessage(data.gameId, { 
+                sender: data.sender,
+                receiver: data.receiver,
+                message: data.message
+            })
 
         }
 
-        else{
+        // else{
 
-
-
-        }
-
-        // const receiver = await User.findOne({ _id: data.receiver });
-        // const sender = await User.findOne({ _id: data.sender });
-
-        // if(sender && receiver){
-
-        //     if(data.type === 'private'){
-
-        //         const saved = await ChatService.saveChatMessage(data.chatId, { 
-        //             sender: sender._id, 
-        //             receiver: receiver._id, 
-        //             message: data.message 
-        //         });
-
-        //         if(!ChatService.userChatExists(sender.chats, saved.data._id) && 
-        //         !ChatService.userChatExists(receiver.chats, saved.data._id)){
-                    
-        //             sender.chats.push(saved.data._id);
-        //             await sender.save();
-
-        //             receiver.chats.push(saved.data._id);
-        //             await sender.save();
-        //         }
-
-        //         socket.to(receiver.socketId).emit("receive-message", {
-        //             sender: sender._id,
-        //             message: data.message
-        //         })
-
-        //     }
-            
-        //     else if(data.type === 'room'){
-
-        //         await ChatService.saveRoomMessage(data.roomId, { 
-        //             sender: sender._id, 
-        //             receiver: receiver._id, 
-        //             message: data.message 
-        //         });
-
-        //         socket.to(data.roomId.toString()).emit("receive-message", {
-        //             sender: sender._id,
-        //             message: data.message
-        //         })
-
-        //     }
-            
-        //     else{
-
-        //         socket.broadcast.emit("receive-message", {
-        //             sender: sender._id,
-        //             message: data.message
-        //         });
-
-        //     }
-
-        // }else{
-
-        //     if(data.type === 'private'){
-
-        //         // socket.to(socketId).emit("receive-message", {
-        //         //     message: data.message
-        //         // })
-
-        //         socket.broadcast.emit("receive-message", {
-        //             message: data.message
-        //         })
-                
-        //     }
+        //     socket.broadcast.emit("global-message", {
+        //         sender: data.sender,
+        //         message: data.message
+        //     });
 
         // }
 
+
     });
 
+    // disconnect
     socket.on("disconnect", async () => {
 
-        const data = await redis.fetchData(socketId);
-        
-        if(data !== null){
-
-            UserService.removeSocketUser(socketId, data._id, data.room)
-
-            // emit total number of users
-            const total = await redis.fetchData(CacheKeys.TotalPlayers);
-            socket.emit('get-total-users', parseInt(total));
-
-        }
+        socket.emit("user-disconnected", {});
 
     })
 

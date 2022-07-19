@@ -1,10 +1,12 @@
 import { arrayIncludes } from '@btffamily/checkaam';
 import {ObjectId} from 'mongoose'
 import Chat from '../models/Chat.model';
+import Game from '../models/Game.model';
 import Message from '../models/Message.model';
 import Room from '../models/Room.model';
+import User from '../models/User.model';
 import { generate } from '../utils/random.util';
-import { IResult, IChatMessage } from '../utils/types.util'
+import { IResult, IChatMessage, IMessage } from '../utils/types.util'
 
 class ChatService {
 
@@ -82,13 +84,40 @@ class ChatService {
 
     }
 
-    public async saveRoomMessage(roomId: ObjectId, data: IChatMessage ): Promise<IResult>{
+    public async processChat(data: IMessage): Promise<void> {
 
-        const room = await Room.findOne({ _id: roomId });
+        const receiver = await User.findOne({ _id: data.receiver });
+        const sender = await User.findOne({ _id: data.sender });
 
-        if(room){
+        if(receiver && sender){
 
-            const chat = await Chat.findOne({ room: room._id });
+            const saved = await this.saveChatMessage(data.chatId, { 
+                sender: sender._id, 
+                receiver: receiver._id, 
+                message: data.message 
+            });
+
+            if(!this.userChatExists(sender.chats, saved.data._id) && 
+            !this.userChatExists(receiver.chats, saved.data._id)){
+                
+                sender.chats.push(saved.data._id);
+                await sender.save();
+
+                receiver.chats.push(saved.data._id);
+                await sender.save();
+            }
+
+        }
+
+    }
+
+    public async saveGameMessage(gameId: string, data: IChatMessage ): Promise<IResult>{
+
+        const game = await Game.findOne({ gameID: gameId });
+
+        if(game){
+
+            const chat = await Chat.findOne({ game: game._id });
 
             if(chat){
 
@@ -112,7 +141,7 @@ class ChatService {
                     partyA: data.sender,
                     partyB: data.receiver,
                     isRoom: true,
-                    room: room._id
+                    game: game._id
                 });
     
                 const message = await Message.create({
@@ -125,8 +154,8 @@ class ChatService {
                 newChat.messages.push(message._id);
                 await newChat.save();
 
-                room.chat = newChat._id;
-                await room.save();
+                game.chat = newChat._id;
+                await game.save();
     
                 this.result.data = chat;
     

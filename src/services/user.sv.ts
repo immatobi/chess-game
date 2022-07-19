@@ -9,6 +9,7 @@ import UserCreated from '../events/publishers/user-created'
 import Room from '../models/Room.model';
 import redis from '../middleware/redis.mw';
 import { CacheKeys } from '../utils/cache.util';
+import Game from '../models/Game.model';
 
 class UserService {
 
@@ -79,30 +80,14 @@ class UserService {
 
     }
 
-    public async addSocketUser(socketId: string, userId: ObjectId, roomId: ObjectId | null): Promise<IResult>{
+    public async addSocketUser(socketId: string, userId: ObjectId): Promise<IResult>{
 
         const user = await User.findOne({ _id: userId });
-        const room = await Room.findOne({ _id: roomId });
 
-        if(user && !room){
+        if(user){
+
             user.socketId = socketId;
-            user.room = room;
             await user.save();
-
-            // cache the new user with socket id // 180 days
-            await redis.keepData({
-                key: socketId,
-                value: user
-            }, 15552000);
-        }
-
-        if(user && room){
-
-            user.room = room._id;
-            await user.save();
-
-            room.players.push(user._id);
-            await room.save();
 
             // cache the new user with socket id // 180 days
             await redis.keepData({
@@ -119,44 +104,94 @@ class UserService {
                 value: ( parseInt(total) + 1 )
             }, 15552000)
 
+            this.result.data = user;
+
         }
 
         return this.result;
 
     }
 
-    public async removeSocketUser(socketId: string, userId: ObjectId, roomId: ObjectId): Promise<IResult>{
+    public async addUserGame(gameId: string, socketId: string): Promise<IResult>{
 
-        const user = await User.findOne({ _id: userId });
-        const room = await Room.findOne({ _id: roomId });
+        const user = await User.findOne({ socketId: socketId });
+        const game = await Game.findOne({ gameID: gameId });
 
-        if(user && !room){
+        if(user && game){
 
-            // remove user data from redis
-            await redis.deleteData(socketId);
+            user.game = game._id;
+            await user.save();
+
+            game.members.push(user._id);
+            await game.save();
+
+            // update user cache
+            await redis.keepData({
+                key: user.socketId,
+                value: user
+            }, 15552000);
 
             // get current total 
-            const total = await redis.fetchData(CacheKeys.TotalPlayers);
+            const key = `${CacheKeys.GameMembers}.${game.gameID}`
+            const total = await redis.fetchData(key);
 
-            // update total users online // 180 days
+            // update total room members // 180 days
             await redis.keepData({
-                key: CacheKeys.TotalPlayers,
-                value: ( parseInt(total) - 1 )
+                key: key,
+                value: ( parseInt(total) + 1 )
             }, 15552000)
+
+            this.result.data = user;
 
         }
 
-        if(user && room){
+        return this.result;
 
-            user.room = null;
+    }
+
+    public async removeUserGame(gameId: string, socketId: string): Promise<IResult>{
+
+        const user = await User.findOne({ socketId: socketId });
+        const game = await Game.findOne({ gameID: gameId });
+
+        if(user && game){
+
+            user.game = null;
             await user.save();
 
-            const index = room.players.findIndex((p) => p.toString() === user._id.toString());
-            room.players.splice(index, 1);
-            await room.save();
+            const index = game.members.findIndex((r) => r.toString() === user._id.toString());
+            game.members.splice(index, 1);
+            await game.save();
+
+            // update user cache
+            await redis.deleteData(user.socketId);
+
+            // get current total 
+            const key = `${CacheKeys.GameMembers}.${game.gameID}`
+            const total = await redis.fetchData(key);
+
+            // update total room members // 180 days
+            await redis.keepData({
+                key: key,
+                value: ( parseInt(total) - 1 )
+            }, 15552000)
+
+            this.result.data = user;
+
+        }
+
+        return this.result;
+
+    }
+
+    public async removeSocketUser(userId: ObjectId): Promise<IResult>{
+
+        const user = await User.findOne({ _id: userId });
+
+        if(user){
 
             // remove user data from redis
-            await redis.deleteData(socketId);
+            await redis.deleteData(user.socketId);
 
             // get current total 
             const total = await redis.fetchData(CacheKeys.TotalPlayers);
@@ -165,7 +200,7 @@ class UserService {
             await redis.keepData({
                 key: CacheKeys.TotalPlayers,
                 value: ( parseInt(total) - 1 )
-            }, 15552000)
+            }, 15552000);
 
         }
 
