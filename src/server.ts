@@ -75,75 +75,79 @@ ioServer.on('connection', (socket) => {
     // send message (chat)
     socket.on('send-message', async (data: IMessage) => {
 
-        const receiver = await User.findOne({ _id: data.receiver });
-        const sender = await User.findOne({ _id: data.sender });
+        socket.broadcast.emit("receive-message", {
+            message: data.message
+        })
 
-        if(sender && receiver){
+        // const receiver = await User.findOne({ _id: data.receiver });
+        // const sender = await User.findOne({ _id: data.sender });
 
-            if(data.type === 'private'){
+        // if(sender && receiver){
 
-                const saved = await ChatService.saveChatMessage(data.chatId, { 
-                    sender: sender._id, 
-                    receiver: receiver._id, 
-                    message: data.message 
-                });
+        //     if(data.type === 'private'){
 
-                if(!ChatService.userChatExists(sender.chats, saved.data._id) && 
-                !ChatService.userChatExists(receiver.chats, saved.data._id)){
+        //         const saved = await ChatService.saveChatMessage(data.chatId, { 
+        //             sender: sender._id, 
+        //             receiver: receiver._id, 
+        //             message: data.message 
+        //         });
+
+        //         if(!ChatService.userChatExists(sender.chats, saved.data._id) && 
+        //         !ChatService.userChatExists(receiver.chats, saved.data._id)){
                     
-                    sender.chats.push(saved.data._id);
-                    await sender.save();
+        //             sender.chats.push(saved.data._id);
+        //             await sender.save();
 
-                    receiver.chats.push(saved.data._id);
-                    await sender.save();
-                }
+        //             receiver.chats.push(saved.data._id);
+        //             await sender.save();
+        //         }
 
-                socket.to(receiver.socketId).emit("receive-message", {
-                    sender: sender._id,
-                    message: data.message
-                })
+        //         socket.to(receiver.socketId).emit("receive-message", {
+        //             sender: sender._id,
+        //             message: data.message
+        //         })
 
-            }
+        //     }
             
-            else if(data.type === 'room'){
+        //     else if(data.type === 'room'){
 
-                await ChatService.saveRoomMessage(data.roomId, { 
-                    sender: sender._id, 
-                    receiver: receiver._id, 
-                    message: data.message 
-                });
+        //         await ChatService.saveRoomMessage(data.roomId, { 
+        //             sender: sender._id, 
+        //             receiver: receiver._id, 
+        //             message: data.message 
+        //         });
 
-                socket.to(data.roomId.toString()).emit("receive-message", {
-                    sender: sender._id,
-                    message: data.message
-                })
+        //         socket.to(data.roomId.toString()).emit("receive-message", {
+        //             sender: sender._id,
+        //             message: data.message
+        //         })
 
-            }
+        //     }
             
-            else{
+        //     else{
 
-                socket.broadcast.emit("receive-message", {
-                    sender: sender._id,
-                    message: data.message
-                });
+        //         socket.broadcast.emit("receive-message", {
+        //             sender: sender._id,
+        //             message: data.message
+        //         });
 
-            }
+        //     }
 
-        }else{
+        // }else{
 
-            if(data.type === 'private'){
+        //     if(data.type === 'private'){
 
-                // socket.to(socketId).emit("receive-message", {
-                //     message: data.message
-                // })
+        //         // socket.to(socketId).emit("receive-message", {
+        //         //     message: data.message
+        //         // })
 
-                socket.broadcast.emit("receive-message", {
-                    message: data.message
-                })
+        //         socket.broadcast.emit("receive-message", {
+        //             message: data.message
+        //         })
                 
-            }
+        //     }
 
-        }
+        // }
 
     });
 
