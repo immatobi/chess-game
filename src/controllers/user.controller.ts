@@ -18,6 +18,7 @@ dayjs.extend(customparse);
 // models
 import User from '../models/User.model'
 import Role from '../models/Role.model'
+import Chat from '../models/Chat.model';
 
 
 // @desc           Get all users
@@ -33,27 +34,72 @@ export const getUsers = asyncHandler(async (req: Request, res:Response, next: Ne
 // @access  Private/Superadmin/Admin
 export const getUser = asyncHandler(async (req: Request, res:Response, next: NextFunction) => {
 	
-	const user = await User.findById(req.params.id).populate(
-	[
-		{ path: 'roles', select: '_id name resources' },
-	]);
+	const user = await User.findById(req.params.id);
 
 	if(!user){
-		return next(new ErrorResponse(`Error!`, 404, ['Could not find user']))
+		return next(new ErrorResponse(`Error!`, 404, ['could not find user']))
 	}
 
 	const _user = await User.findOne({ _id: user._id}).populate([ 
-		{ path: 'roles', select: '_id name', },
-		{ path: 'verification' },
-		{ path: 'kyc' },
-		{ path: 'country' },
+		{ path: 'roles', select: '_id name'},
+		{ path: 'games' },
+		{ path: 'game' },
+		{ path: 'rooms' },
+		{ path: 'chats' }
 	 ]);
 
 	res.status(200).json({
 		error: false,
 		errors: [],
 		message: `successful`,
-		data: user.isSuper ? null : user,
+		data: user.isSuper ? null : _user,
+		status: 200
+	});
+
+})
+
+// @desc    Get a user
+// @route   GET /api/v1/users/:id
+// @access  Private/Superadmin/Admin
+export const getChat = asyncHandler(async (req: Request, res:Response, next: NextFunction) => {
+	
+	let chat: any;
+	
+	const { party } = req.body;
+
+	if(!party){
+		return next(new ErrorResponse(`Error!`, 400, ['chat party is required']))
+	}
+
+	const user = await User.findOne({ _id: req.params.id })
+
+	if(!user){
+		return next(new ErrorResponse(`Error!`, 400, ['user does not exist']))
+	}
+
+	const chatParty = await User.findOne({ _id: party })
+
+	if(!chatParty){
+		return next(new ErrorResponse(`Error!`, 400, ['chat party does not exist']))
+	}
+
+	chat = await Chat.findOne({ partyA: user._id, partyB: chatParty._id }).populate([
+		{ path: 'messages' }
+	]);
+
+	if(!chat){
+
+		chat = await Chat.findOne({ partyA: chatParty._id, partyB: user._id }).populate([
+			{ path: 'messages' }
+		]);
+
+	}
+
+	res.status(200).json({
+		error: false,
+		errors: [],
+		data: chat,
+		message: `successful`,
 		status: 200
 	});
 

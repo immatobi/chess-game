@@ -14,7 +14,25 @@ class RoomService {
         this.result = { error: false, message: '', data: null }
     }
 
-    
+    public async pullRoomAndGames(roomId: string): Promise<IResult>{
+
+        const room = await Room.findOne({ roomID: roomId }).populate([
+            { path: 'manager' },
+            { path: 'owner' },
+            { path: 'games' },
+            { path: 'members', select: '_id username' }
+        ]);
+
+        if(room){
+            this.result.data = room;
+        }else{
+            this.result.error = true;
+            this.result.message = 'room does not exist'
+        }
+
+        return this.result;
+
+    }
 
 }
 

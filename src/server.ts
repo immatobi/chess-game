@@ -13,6 +13,7 @@ import { CacheKeys } from './utils/cache.util'
 import { IGameData, IMessage } from './utils/types.util'
 import ChatService from './services/chat.sv'
 import * as http from 'http'
+import RoomService from './services/room.sv'
 
 const connect = async (): Promise<void> => {
 
@@ -68,7 +69,7 @@ ioServer.on('connection', (socket) => {
 
     })
 
-    // join room
+    // join game
     socket.on('join-game', async (data: IGameData) => {
 
         await socket.join(data.gameId);
@@ -80,7 +81,7 @@ ioServer.on('connection', (socket) => {
 
     });
 
-    // join room
+    // leave game
     socket.on('leave-game', async (data: IGameData) => {
 
         await socket.leave(data.gameId);
@@ -136,6 +137,12 @@ ioServer.on('connection', (socket) => {
 
 
     });
+
+    // get room and games
+    socket.on('get-room', async (roomId: string) => {
+        const room = await RoomService.pullRoomAndGames(roomId);
+        socket.emit("room-data-open", room);
+    })
 
     // disconnect
     socket.on("disconnect", async () => {

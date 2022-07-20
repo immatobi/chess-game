@@ -70,6 +70,7 @@ interface IUserDoc extends IUserModel, mongoose.Document {
 	chats: Array<ObjectId | any>;
 	game: ObjectId | any;
     rooms: Array<ObjectId | any>;
+	games:Array<ObjectId | any>;
 
     // time stamps
     createdAt: string;
@@ -266,6 +267,13 @@ const UserSchema = new mongoose.Schema(
 			{
 				type: mongoose.Schema.Types.ObjectId,
 				ref: 'Chat'
+			}
+		],
+
+		games: [
+			{
+				type: mongoose.Schema.Types.ObjectId,
+				ref: 'Game'
 			}
 		],
 

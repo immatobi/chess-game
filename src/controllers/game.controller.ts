@@ -1,15 +1,7 @@
-import crypto from 'crypto';
-import mongoose, { ObjectId, Model } from 'mongoose';
 import { Request, Response, NextFunction } from 'express';
 import ErrorResponse from '../utils/error.util';
-import { sendGrid } from '../utils/email.util';
-import { asyncHandler, strIncludesEs6, arrayIncludes, isString } from '@btffamily/checkaam'
+import { asyncHandler, arrayIncludes } from '@btffamily/checkaam'
 import { generate } from '../utils/random.util';
-import { seedData } from '../config/seeds/seeder.seed';
-import { uploadBase64File } from '../utils/google.util'
-import { IBasicKyc, IAddressKyc } from '../utils/types.util'
-import StorageService from '../services/storage'
-import UserService from '../services/user.sv'
 
 import dayjs from 'dayjs';
 import customparse from 'dayjs/plugin/customParseFormat';
@@ -17,13 +9,16 @@ dayjs.extend(customparse);
 
 // models
 import User from '../models/User.model'
-import Role from '../models/Role.model'
+import Game from '../models/Game.model'
+import Room from '../models/Room.model';
+import { advanced } from '../utils/result.util';
+import Chat from '../models/Chat.model';
 
 
 // @desc           Get all users
 // @route          GET /api/v1/users
 // @access         Private
-export const getUsers = asyncHandler(async (req: Request, res:Response, next: NextFunction) => {
+export const getGames = asyncHandler(async (req: Request, res:Response, next: NextFunction) => {
 	res.status(200).json(res.advancedResults);   
 })
 
@@ -31,305 +26,190 @@ export const getUsers = asyncHandler(async (req: Request, res:Response, next: Ne
 // @desc    Get a user
 // @route   GET /api/v1/users/:id
 // @access  Private/Superadmin/Admin
-export const getUser = asyncHandler(async (req: Request, res:Response, next: NextFunction) => {
+export const getGame = asyncHandler(async (req: Request, res:Response, next: NextFunction) => {
 	
-	const user = await User.findById(req.params.id).populate(
-	[
-		{ path: 'roles', select: '_id name resources' },
-	]);
+	const game = await Game.findOne({ _id: req.params.id }).populate([
+		{ path: 'manager' },
+		{ path: 'owner' },
+		{ path: 'room', select: '_id roomID' },
+		{ path: 'members', select: '_id username' },
+		{ path: 'playerA', select: '_id username' },
+		{ path: 'playerB', select: '_id username' },
+		{ path: 'chat', populate: [
+			{ path: 'messages' }
+		] }
+	])
 
-	if(!user){
-		return next(new ErrorResponse(`Error!`, 404, ['Could not find user']))
+	if(!game){
+		return next(new ErrorResponse(`Error!`, 404, ['game does not exist']))
 	}
-
-	const _user = await User.findOne({ _id: user._id}).populate([ 
-		{ path: 'roles', select: '_id name', },
-		{ path: 'verification' },
-		{ path: 'kyc' },
-		{ path: 'country' },
-	 ]);
 
 	res.status(200).json({
 		error: false,
 		errors: [],
+		data: game,
 		message: `successful`,
-		data: user.isSuper ? null : user,
+		status: 200
+	});
+
+})
+
+// @desc    Get a user
+// @route   GET /api/v1/users/:id
+// @access  Private/Superadmin/Admin
+export const getChat = asyncHandler(async (req: Request, res:Response, next: NextFunction) => {
+	
+	const game = await Game.findOne({ _id: req.params.id });
+
+	if(!game){
+		return next(new ErrorResponse(`Error!`, 404, ['game does not exist']))
+	}
+
+	const chat = await Chat.findOne({ game: game._id }).populate([ { path: 'messages' } ])
+
+	res.status(200).json({
+		error: false,
+		errors: [],
+		data: chat,
+		message: `successful`,
 		status: 200
 	});
 
 })
 
 
-// @desc        Change password
-// @route       PUT /api/identity/v1/users/change-password/:id
-// @access      Private
-export const changePassword = asyncHandler(async (req: Request, res:Response, next: NextFunction) => {
+// @desc        Login user (with verification)
+// @route       POST /api/identity/v1/auth/login
+// @access      Public
+export const addGame = asyncHandler(async (req: Request, res:Response, next: NextFunction) => {
 
-	const { oldPassword, newPassword, code } = req.body;
+	const { name, description, managerId, roomId } = req.body;
 
-	// validate email and password
-	if(!oldPassword || !oldPassword){
-		return next(new ErrorResponse('invalid', 400, ['old password is required', 'new password is required']));
+	if(!name){
+		return next(new ErrorResponse('Error', 400, ['room name is required']))
 	}
 
-	// check for user
-	const user = await User.findById(req.params.id).select('+password');
+	if(!managerId){
+		return next(new ErrorResponse('Error', 400, ['manager id is required']))
+	}
+
+	if(!roomId){
+		return next(new ErrorResponse('Error', 400, ['room id is required']))
+	}
+
+	const manager = await User.findOne({ _id: managerId });
+
+	if(!manager){
+		return next(new ErrorResponse('Error', 404, ['manager does not exist']))
+	}
+
+	if(!manager.hasRole('manager', manager.roles)){
+		return next(new ErrorResponse('Error', 404, ['user is not a manager']))
+	}
+
+	const room = await Room.findOne({ _id: roomId });
+
+	if(!room){
+		return next(new ErrorResponse('Error', 404, ['room does not exist']))
+	}
+
+	if(room.games.length === room.gameLimit){
+		return next(new ErrorResponse('Error', 403, ['games limit exceeded']))
+	}
+
+	const owner = await User.findOne({ _id: req.user._id });
+
+	const gen = generate(6, false);
+
+	const game = await Game.create({
+		name, 
+		description,
+		manager: manager._id,
+		roomID: gen.toString(),
+		owner: owner?._id,
+		room: room._id
+	});
+
+	manager.games.push(game._id);
+	await manager.save();
+
+	owner?.games.push(game._id);
+	await owner?.save();
+
+	room.games.push(game._id);
+	await room.save();
+
+	res.status(200).json({
+		error: false,
+		errors: [],
+		data: game,
+		message: `successful`,
+		status: 200
+	});
+
+})
+
+// @desc        Login user (with verification)
+// @route       POST /api/identity/v1/auth/login
+// @access      Public
+export const playGame = asyncHandler(async (req: Request, res:Response, next: NextFunction) => {
+
+	const { userId } = req.body;
+
+	if(!userId){
+		return next(new ErrorResponse('Error', 400, ['user id is required']))
+	}
+
+	const game = await Game.findOne({ _id: req.params.id });
+
+	if(!game){
+		return next(new ErrorResponse('Error', 404, ['game does not exist']))
+	}
+
+	const user = await User.findOne({ _id: userId });
 
 	if(!user){
-		return next(new ErrorResponse('Error', 400, ['invalid credentials']))
+		return next(new ErrorResponse('Error', 404, ['user does not exist']))
 	}
 
-	const isMatched = await user.matchPassword(oldPassword);
-
-	if(!isMatched){
-		return next(new ErrorResponse('Error', 400, ['invalid credentials']))
+	if(game.playersCount === 2){
+		return next(new ErrorResponse('Error', 404, ['game players already set']))
 	}
 
-	if(!code && !user.isSuper){
-
-		const mailCode = await generate(6, false);
-
-		let emailData = {
-			template: 'email-verify',
-			email: user.email,
-			preheaderText: 'Verify your email',
-			emailTitle: 'Email Verification',
-			emailSalute: 'Hi Champ',
-			bodyOne: 'Please verify your email using the code below',
-			bodyTwo: `${mailCode}`,
-			fromName: process.env.FROM_NAME
-		}
-
-		await sendGrid(emailData);
-
-		user.emailCode = mailCode.toString();
-		user.emailCodeExpire = Date.now() + 30 * 60 * 1000; // 30 minutes // generates timestamp
-		await user.save();
-
-		res.status(206).json({
-			error: true,
-			errors: ['email verification is required'],
-			data: null,
-			message: 'verification required',
-			status: 206
-		})
+	if(!game.playerA && !game.playerB){
+		game.playerA = user._id;
+		game.playersCount = 1;
+		await game.save()
 	}
 
-	if(code && !user.isSuper){
-
-		const today = dayjs();
-
-		const codeMatched = await User.findOne({ emailCode: code, emailCodeExpire: { $gt: today }})
-
-		if(!codeMatched){
-			return next(new ErrorResponse('invalid code', 400, ['invalid verification code']))
-		}
-
-		user.password = newPassword;
-		user.savedPassword = newPassword;
-		await user.save();
-
-		res.status(200).json({
-			error: false,
-			errors: [],
-			data: null,
-			message: 'successfull',
-			status: 200
-		})
-
+	if(!game.playerA && game.playerB){
+		game.playerA = user._id;
+		game.playersCount = 2;
+		await game.save()
 	}
 
-})
-
-
-// @desc        Add Business manager
-// @route       POST /api/identity/v1/users/add-user
-// @access      Private
-export const addUser = asyncHandler(async (req: Request, res:Response, next: NextFunction) => {
-
-	const { firstName, lastName, email, phoneNumber, phoneCode, callback} = req.body;
-	const { invite } = req.query;
-
-	if(invite && invite.toString() === 'true' && !callback){
-		return next(new ErrorResponse('Error', 400, ['invite callback url is required']));
+	if(game.playerA && !game.playerB){
+		game.playerB = user._id;
+		game.playersCount = 2;
+		await game.save()
 	}
 
-	// validate
-	if(!firstName){
-		return next(new ErrorResponse('Error', 400, ['first name is required']));
-	}
-
-	if(!lastName){
-		return next(new ErrorResponse('Error', 400, ['last name is required']));
-	}
-
-	if(!email){
-		return next(new ErrorResponse('Error', 400, ['email is required']));
-	}
-
-	const existing = await User.findOne({email: email});
-
-	if(existing){
-		return next(new ErrorResponse('Error', 403, ['email already exists']));
-	}
-
-	if(!phoneNumber){
-		return next(new ErrorResponse('Error', 400, ['phone number is required']));
-	}
-
-	if(!phoneCode){
-		return next(new ErrorResponse('Error', 400, ['phone code is required']));
-	}
-
-	if(!strIncludesEs6(phoneCode, '+')){
-        return next(new ErrorResponse('Error', 400, ['phone code is must include \'+\' sign']));
-    }
-
-	// format phone number
-	let phoneStr: string;
-	if(strIncludesEs6(phoneCode, '-')){
-		phoneStr = phoneCode.substring(3);
-	}else{
-		phoneStr = phoneCode.substring(1);
-	}
-
-	const phoneExists = await User.findOne({ phoneNumber: phoneStr + phoneNumber.substring(1) });
-
-	if(phoneExists){
-		return next(new ErrorResponse('Error', 400, ['phone number already exists']));
-	}
-
-	const role = await Role.findOne({ name: 'user' }); // get the manager role
-
-	if(!role){
-		return next(new ErrorResponse('Error', 500, ['role not found. contact support team.']));
-	}
-
-	const password = await generate(8, true);  // generate password
-
-	const user = await User.create({
-
-		firstName,
-		lastName,
-        email,
-        password: password,
-		passwordType: 'generated',
-		phoneCode: phoneStr,
-		savedPassword: password,
-		phoneNumber: phoneStr + phoneNumber.substring(1),
-		userType: 'user',
-        isSuper: false,
-		isActivated: false,
-		isAdmin: false,
-		isTalent: false,
-		isBusiness: false,
-		isManager: true,
-		isUser: true,
-		isActive: true
-
-	})
-
-	user.roles.push(role?._id);
-	const token = user.getInviteToken();
-	await user.save({ validateBeforeSave: false });
-
-	const inviteLink = `${callback}/${token}`;
-
-	if(invite && invite.toString() === 'true'){
-
-		let emailData = {
-			template: 'welcome',
-			email: user.email,
-			preheaderText: 'Checkaam Invitation',
-			emailTitle: 'Checkaam Invite',
-			emailSalute: 'Hello ' + user.firstName + ',',
-			bodyOne: 'Checkaam has invited you to join them their platform.',
-			bodyTwo: 'You can accept invitation by clicking the button below or ignore this email to decline. Invitation expires in 24 hours',
-			buttonUrl: `${inviteLink}`,
-			buttonText: 'Accept Invite',
-			fromName: process.env.FROM_NAME
-		}
-
-		await sendGrid(emailData);
-	}
-
-	const returnData = {
-		_id: user._id,
-		firstName: user.firstName,
-		lastName: user.lastName,
-        email: user.email,
-		phoneNumber: user.phoneNumber,
-		phoneCode: phoneCode,
-		role: {
-			_id: role?._id,
-			name: role?.name
-		},
-		inviteLink: `${callback}/${token}`,
-		userType: user.userType
-	}
+	const _game = await Game.findOne({ _id: game._id }).populate([ 
+		{  path: 'playerA', select: '_id username' },
+		{  path: 'playerB', select: '_id username' }
+	])
 
 	res.status(200).json({
 		error: false,
 		errors: [],
-		data: returnData,
-		message: 'successful',
+		data: { playerA: _game?.playerA, playerB: _game?.playerB },
+		message: `successful`,
 		status: 200
-	})
-
-})
-
-// @desc        Accept Invite
-// @route       PUT /api/identity/v1/users/accept-invite
-// @access      Private
-export const acceptInvite = asyncHandler(async (req: Request, res:Response, next: NextFunction) => {
-	
-	const { token } = req.body;
-
-	if(!token){
-		return new ErrorResponse('Error', 400, ['token is required'])
-	}
-
-	const hashed = crypto
-    .createHash('sha256')
-    .update(token)
-    .digest('hex');
-
-	const today = dayjs();
-
-	const user = await User.findOne({ inviteToken: hashed, inviteTokenExpire: { $gt: today }});
-
-	if(!user){
-		return next(new ErrorResponse('invalid token', 400, ['invite link expired']));
-	}
-
-	user.inviteToken = undefined;
-	user.inviteTokenExpire = undefined;
-	await user.save();
-	
-	res.status(200).json({
-		error: false,
-		errors: [],
-		data: { _id: user._id, email: user.email, userType: user.userType },
-		message: 'successful',
-		status: 200
-	})
+	});
 
 })
 
 
-export const seedDB = asyncHandler(async (req: Request, res:Response, next: NextFunction) => {
-	
-	await seedData();
-	
-	res.status(200).json({
-		error: false,
-		errors: [],
-		data: null,
-		message: 'successful',
-		status: 200
-	})
-
-})
 
 /** 
  * snippet

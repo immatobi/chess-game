@@ -23,9 +23,13 @@ const RoomSchema = new mongoose.Schema (
             type: String
         },
 
+        gameLimit: {
+            type: Number,
+            default: 10
+        },
+
         password: {
             type: String,
-            required: [true, 'room password is required'],
             select: false
         },
 
@@ -43,6 +47,13 @@ const RoomSchema = new mongoose.Schema (
             {
                 type: mongoose.Schema.Types.ObjectId,
                 ref: 'User'
+            }
+        ],
+
+        games: [
+            {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: 'Game'
             }
         ],
 

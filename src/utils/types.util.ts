@@ -87,10 +87,12 @@ export interface IRoomDoc extends Document{
     description: string;
     slug: string;
     password: string;
+    gameLimit: number;
 
     manager: ObjectId | any;
     owner: ObjectId | any;
     members: Array<ObjectId | any>;
+    games: Array<ObjectId | any>;
     chat: ObjectId | any;
 
     // time stamps
@@ -112,6 +114,7 @@ export interface IGameDoc extends Document{
     gameID: string;
     description: string;
     slug: string;
+    playersCount: number;
 
     manager: ObjectId | any;
     owner: ObjectId | any;
@@ -119,6 +122,7 @@ export interface IGameDoc extends Document{
     playerA: ObjectId | any;
     playerB: ObjectId | any;
     chat: ObjectId | any;
+    room: ObjectId | any;
 
     // time stamps
     createdAt: string;
@@ -269,6 +273,7 @@ export interface IUserDoc extends Document {
 	verification: ObjectId | any;
     game: ObjectId | any;
     rooms: Array<ObjectId | any>;
+    games:Array<ObjectId | any>;
 
     // time stamps
     createdAt: string;

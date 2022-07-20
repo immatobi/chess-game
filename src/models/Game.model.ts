@@ -23,6 +23,10 @@ const GameSchema = new mongoose.Schema (
             type: String
         },
 
+        playersCount: {
+            type: Number
+        },
+
         manager: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'User'
@@ -31,6 +35,11 @@ const GameSchema = new mongoose.Schema (
         owner: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'User'
+        },
+
+        room: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Room'
         },
 
         members: [
