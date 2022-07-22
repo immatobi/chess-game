@@ -115,7 +115,7 @@ export const getAllPlayers = asyncHandler(async (req: Request, res:Response, nex
 	res.status(200).json({
 		error: false,
 		errors: [],
-		data: users,
+		data: users && users.length > 0 ? users : [],
 		message: `successful`,
 		status: 200
 	});

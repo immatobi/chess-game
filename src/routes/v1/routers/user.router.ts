@@ -23,7 +23,7 @@ const roles = ['superadmin', 'admin'];
 const allRoles = ['superadmin', 'admin', 'player', 'manager', 'user'];
 
 router.get('/', vcd, protect, authorize(roles), advanced(User, [], CacheKeys.Users, 'username', false), getUsers);
-router.get('/players', vcd, getAllPlayers);
+router.get('/players', vcd, protect, authorize(allRoles), getAllPlayers);
 router.get('/:id', vcd, protect, authorize(allRoles), getUser);
 router.post('/add-user', vcd, protect, authorize(roles), addUser);
 router.put('/change-password/:id', vcd, protect, authorize(allRoles), changePassword);
