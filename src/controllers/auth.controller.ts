@@ -89,12 +89,14 @@ export const register = asyncHandler(async (req: Request, res: Response, next: N
 	if(userType === 'player'){
 		const role = await Role.findOne({ name: 'player' });
 		user.roles.push(role?._id);
+		user.isPlayer = true;
 		await user.save();
 	}
 
 	if(userType === 'manager'){
 		const role = await Role.findOne({ name: 'manager' });
 		user.roles.push(role?._id);
+		user.isManager = true;
 		await user.save();
 	}
 

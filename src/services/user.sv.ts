@@ -84,7 +84,7 @@ class UserService {
 
         const user = await User.findOne({ _id: userId });
 
-        if(user){
+        if(user && !user.socketId){
 
             user.socketId = socketId;
             await user.save();

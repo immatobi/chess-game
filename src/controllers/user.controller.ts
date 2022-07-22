@@ -105,6 +105,23 @@ export const getChat = asyncHandler(async (req: Request, res:Response, next: Nex
 
 })
 
+// @desc    Get a user
+// @route   GET /api/v1/users/players
+// @access  Private/Superadmin/Admin
+export const getAllPlayers = asyncHandler(async (req: Request, res:Response, next: NextFunction) => {
+	
+	const users = await User.find({ isActive: true, userType: 'player' });
+
+	res.status(200).json({
+		error: false,
+		errors: [],
+		data: users,
+		message: `successful`,
+		status: 200
+	});
+
+})
+
 
 // @desc        Change password
 // @route       PUT /api/identity/v1/users/change-password/:id
