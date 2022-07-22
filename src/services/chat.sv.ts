@@ -42,43 +42,43 @@ class ChatService {
 
         const chat = await Chat.findOne({ _id: chatId });
 
-        if(chat){
+        // if(chat){
 
-            const message = await Message.create({
-                sender: data.sender,
-                receiver: data.receiver,
-                message: data.message,
-                chat: chat._id
-            });
+        //     const message = await Message.create({
+        //         sender: data.sender,
+        //         receiver: data.receiver,
+        //         message: data.message,
+        //         chat: chat._id
+        //     });
 
-            chat.messages.push(message._id);
-            await chat.save();
+        //     chat.messages.push(message._id);
+        //     await chat.save();
 
-            this.result.data = chat;
+        //     this.result.data = chat;
 
-        }else{
+        // }else{
 
-            const gen = generate(6, false);
-            const newChat = await Chat.create({
-                chatID: gen.toString(),
-                partyA: data.sender,
-                partyB: data.receiver,
-                isRoom: false,
-            });
+        //     const gen = generate(6, false);
+        //     const newChat = await Chat.create({
+        //         chatID: gen.toString(),
+        //         partyA: data.sender,
+        //         partyB: data.receiver,
+        //         isRoom: false,
+        //     });
 
-            const message = await Message.create({
-                sender: data.sender,
-                receiver: data.receiver,
-                message: data.message,
-                chat: newChat._id
-            });
+        //     const message = await Message.create({
+        //         sender: data.sender,
+        //         receiver: data.receiver,
+        //         message: data.message,
+        //         chat: newChat._id
+        //     });
 
-            newChat.messages.push(message._id);
-            await newChat.save();
+        //     newChat.messages.push(message._id);
+        //     await newChat.save();
 
-            this.result.data = chat;
+        //     this.result.data = chat;
 
-        }
+        // }
 
         return this.result;
 
@@ -97,14 +97,12 @@ class ChatService {
                 message: data.message 
             });
 
-            if(!this.userChatExists(sender.chats, saved.data._id) && 
-            !this.userChatExists(receiver.chats, saved.data._id)){
-                
-                sender.chats.push(saved.data._id);
-                await sender.save();
+            if(!saved.error){
+                // sender.chats.push(saved.data._id);
+                // await sender.save();
 
-                receiver.chats.push(saved.data._id);
-                await sender.save();
+                // receiver.chats.push(saved.data._id);
+                // await sender.save();
             }
 
         }
