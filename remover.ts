@@ -10,8 +10,10 @@ import Role from './src/models/Role.model'
 import Country from './src/models/Country.model'
 import Announcement from './src/models/Announcement.model'
 import User from './src/models/User.model'
-import Kyc from './src/models/Kyc.model'
-import Verification from './src/models/Verification.model'
+import Chat from './src/models/Chat.model'
+import Message from './src/models/Message.model'
+import Room from './src/models/Room.model'
+import Game from './src/models/Game.model'
 
 const options: object = {
 
@@ -51,8 +53,10 @@ const deleteData = async () : Promise<void> => {
         await User.deleteMany();
         await Announcement.deleteMany();
         await Country.deleteMany();
-        await Verification.deleteMany();
-        await Kyc.deleteMany();
+        await Room.deleteMany();
+        await Game.deleteMany();
+        await Chat.deleteMany();
+        await Message.deleteMany();
 
         console.log(colors.red.inverse('data destroyed successfully...'));
         process.exit();
@@ -75,12 +79,13 @@ export const deleteDBData = async () : Promise<void> => {
         await connectDB();
 
         await Role.deleteMany();
-        await Role.deleteMany();
         await User.deleteMany();
         await Announcement.deleteMany();
         await Country.deleteMany();
-        await Verification.deleteMany();
-        await Kyc.deleteMany();
+        await Room.deleteMany();
+        await Game.deleteMany();
+        await Chat.deleteMany();
+        await Message.deleteMany();
 
         console.log(colors.red.inverse('data destroyed successfully...'));
         process.exit();
