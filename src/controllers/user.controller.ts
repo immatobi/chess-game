@@ -110,7 +110,7 @@ export const getChat = asyncHandler(async (req: Request, res:Response, next: Nex
 // @access  Private/Superadmin/Admin
 export const getAllPlayers = asyncHandler(async (req: Request, res:Response, next: NextFunction) => {
 	
-	const users = await User.find({ isActive: true, userType: 'player' });
+	const users = await User.find({ isActive: true, userType: 'player' }).select("_id username socketId");
 
 	res.status(200).json({
 		error: false,
