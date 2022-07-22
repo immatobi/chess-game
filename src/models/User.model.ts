@@ -109,8 +109,7 @@ const UserSchema = new mongoose.Schema(
 
 		username:{
 			type: String,
-			unique: [true, 'username already exist'],
-			required: [true, 'username is required']
+			unique: [true, 'username already exist']
 		},
 
         phoneNumber: {

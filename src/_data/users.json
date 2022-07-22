@@ -2,6 +2,7 @@
     {
         "firstName": "Super",
         "lastName": "Administrator",
+        "username": "superadmin",
         "email": "admin@chess.co",
         "password": "#_chessAdmin1@",
         "isSuper": true,

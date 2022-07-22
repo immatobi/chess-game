@@ -14,7 +14,7 @@ const router: Router = express.Router({ mergeParams: true });
 import { protect, authorize } from '../../../middleware/auth.mw'
 import { validateChannels as vcd } from '../../../middleware/header.mw';
 
-const roles = ['superadmin', 'admin', 'business', 'manager', 'talent', 'user'];
+const roles = ['superadmin', 'admin', 'player', 'manager', 'user'];
 
 router.post('/welcome/:id', vcd, sendWelcomeEmail);
 router.post('/activate/:id', vcd, protect, authorize(roles), sendActivationEmail);

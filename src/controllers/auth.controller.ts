@@ -759,7 +759,6 @@ const sendTokenResponse = async (user: any, message: string, statusCode: number,
 
 	const _user = await User.findOne({ email: user.email }).populate([
 		{ path: 'roles', select: '_id name' },
-		{ path: 'verification' },
 		{ path: 'country' }
 	]);
 
@@ -774,6 +773,8 @@ const sendTokenResponse = async (user: any, message: string, statusCode: number,
 		isSuper: _user.isSuper,
 		isActivated: _user.isActivated,
 		isAdmin: _user.isAdmin,
+		isPlayer: _user.isPlayer,
+		isManager: _user.isManager,
 		isUser: _user.isUser,
 		isActive: _user.isActive,
 		passwordType: _user.passwordType,

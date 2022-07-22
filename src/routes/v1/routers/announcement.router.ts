@@ -19,7 +19,7 @@ import { protect, authorize } from '../../../middleware/auth.mw'
 import { validateChannels as vcd } from '../../../middleware/header.mw';
 
 const roles = ['superadmin', 'admin'];
-const allRoles = ['superadmin', 'admin', 'user'];
+const allRoles = ['superadmin', 'admin', 'player', 'manager', 'user'];
 
 router.get('/', vcd, protect, authorize(roles), advanced(Announcement, [], CacheKeys.Anns, 'title', true), getAnnouncements);
 router.get('/:id', vcd, getAnnouncement);
