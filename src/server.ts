@@ -48,8 +48,8 @@ const ioServer = new Server(server, {
         origin: '*',
         methods: ['GET', 'POST', 'OPTIONS', 'PUT', 'PATCH', 'DELETE']
     },
-    transports: ['websocket', 'polling'],
-    allowEIO3: true
+    allowEIO3: true,
+    pingTimeout: 6000
  });
 
 ioServer.on('connection', (socket) => {
@@ -61,14 +61,6 @@ ioServer.on('connection', (socket) => {
     socket.on("user-connected", async (userId: ObjectId) => {
 
        await UserService.addSocketUser(socketId, userId);
-
-        // broadcast total number of users
-        // const total = await redis.fetchData(CacheKeys.TotalPlayers);
-        // socket.broadcast.emit('get-total-users', parseInt(total));
-
-        // emit all players data
-        const players = await redis.fetchData(CacheKeys.Players);
-        socket.broadcast.emit("get-all-players", players)
 
     })
 
@@ -101,8 +93,10 @@ ioServer.on('connection', (socket) => {
 
         if(data.type === 'private'){
 
+            const recSoc = await redis.fetchData(data.receiver.toString()); // get socket id from cache
+
             // publish the message first
-            await socket.to(data.socketId).emit("receive-message", {
+            await socket.to(recSoc).emit("receive-message", {
                 sender: data.sender,
                 receiver: data.receiver,
                 message: data.message

@@ -80,6 +80,20 @@ class UserService {
 
     }
 
+    public async getSocketUser(userId: ObjectId): Promise<IResult>{
+
+        const user = await User.findOne({ _id: userId });
+
+        if(user){
+            this.result.data = user.socketId;
+        }else{
+            this.result.data = '';
+        }
+
+        return this.result;
+
+    }
+
     public async addSocketUser(socketId: string, userId: ObjectId): Promise<IResult>{
 
         const user = await User.findOne({ _id: userId });
@@ -91,14 +105,21 @@ class UserService {
                 // get current total 
                 const total = await redis.fetchData(CacheKeys.TotalPlayers);
 
-                // update total users online // 180 days
+                // update total users online // 2 days
                 await redis.keepData({
                     key: CacheKeys.TotalPlayers,
                     value: ( parseInt(total) + 1 )
-                }, 15552000)
+                }, 172800)
 
             }
 
+            // cache the current socket-id
+            await redis.keepData({
+                key: user._id.toString(),
+                value: socketId
+            }, 172800);
+
+            // save current socketid to db
             user.socketId = socketId;
             await user.save();
 
@@ -133,11 +154,11 @@ class UserService {
             const key = `${CacheKeys.GameMembers}.${game.gameID}`
             const total = await redis.fetchData(key);
 
-            // update total room members // 180 days
+            // update total room members // 2 days
             await redis.keepData({
                 key: key,
                 value: ( parseInt(total) + 1 )
-            }, 15552000)
+            }, 172800)
 
             this.result.data = user;
 
@@ -168,11 +189,11 @@ class UserService {
             const key = `${CacheKeys.GameMembers}.${game.gameID}`
             const total = await redis.fetchData(key);
 
-            // update total room members // 180 days
+            // update total room members // 2 days
             await redis.keepData({
                 key: key,
                 value: ( parseInt(total) - 1 )
-            }, 15552000)
+            }, 172800)
 
             this.result.data = user;
 
@@ -194,11 +215,11 @@ class UserService {
             // get current total 
             const total = await redis.fetchData(CacheKeys.TotalPlayers);
 
-            // update total users online // 180 days
+            // update total users online // 2 days
             await redis.keepData({
                 key: CacheKeys.TotalPlayers,
                 value: ( parseInt(total) - 1 )
-            }, 15552000);
+            }, 172800);
 
         }
 

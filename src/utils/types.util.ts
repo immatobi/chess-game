@@ -332,9 +332,8 @@ export interface IAddressKyc {
 }
 
 export interface IMessage {
-    socketId: string,
-    sender: string,
-    receiver: string,
+    sender: ObjectId,
+    receiver: ObjectId,
     message: string,
     type: string,
     chatId: string,
@@ -342,8 +341,8 @@ export interface IMessage {
 }
 
 export interface IChatMessage {
-    sender: string,
-    receiver: string,
+    sender: ObjectId,
+    receiver: ObjectId,
     message: string
 }
 
