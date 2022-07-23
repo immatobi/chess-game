@@ -99,7 +99,7 @@ ioServer.on('connection', (socket) => {
         if(data.type === 'private'){
 
             // publish the message first
-            await socket.to(data.socketId).emit("receive-message", {
+            await socket.to(data.receiver.toString()).emit("receive-message", {
                 sender: data.sender,
                 receiver: data.receiver,
                 message: data.message
