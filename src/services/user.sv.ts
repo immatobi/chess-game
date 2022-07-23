@@ -84,25 +84,40 @@ class UserService {
 
         const user = await User.findOne({ _id: userId });
 
-        if(user && !user.socketId){
+        if(user){
 
-            user.socketId = socketId;
-            await user.save();
+            if(user.socketId !== ''){
 
-            // cache the new user with socket id // 180 days
-            await redis.keepData({
-                key: socketId,
-                value: user
-            }, 15552000);
+                user.socketId = socketId;
+                await user.save();
 
-            // get current total 
-            const total = await redis.fetchData(CacheKeys.TotalPlayers);
+                // cache the new user with socket id // 180 days
+                await redis.keepData({
+                    key: socketId,
+                    value: user
+                }, 15552000);
 
-            // update total users online // 180 days
-            await redis.keepData({
-                key: CacheKeys.TotalPlayers,
-                value: ( parseInt(total) + 1 )
-            }, 15552000)
+            }else{
+
+                user.socketId = socketId;
+                await user.save();
+
+                // cache the new user with socket id // 180 days
+                await redis.keepData({
+                    key: socketId,
+                    value: user
+                }, 15552000);
+
+                // get current total 
+                const total = await redis.fetchData(CacheKeys.TotalPlayers);
+
+                // update total users online // 180 days
+                await redis.keepData({
+                    key: CacheKeys.TotalPlayers,
+                    value: ( parseInt(total) + 1 )
+                }, 15552000)
+
+            }
 
             this.result.data = user;
 

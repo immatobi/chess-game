@@ -65,7 +65,7 @@ ioServer.on('connection', (socket) => {
         socket.broadcast.emit('get-total-users', parseInt(total));
 
         // emit user socket id
-        // socket.emit("get-user-socket", { socketId: socketUser.data.socketId, _id: socketUser.data._id })
+        socket.emit("get-user-socket", { socketId: socketUser.data.socketId, _id: socketUser.data._id })
 
     })
 
