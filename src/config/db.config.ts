@@ -67,8 +67,8 @@ const connectNats = async (): Promise<void> => {
 
 const listenNats = async (): Promise<void> => {
 
-    await new CountryFound(nats.client).listen();
-    await new LocationSaved(nats.client).listen();
+    // await new CountryFound(nats.client).listen();
+    // await new LocationSaved(nats.client).listen();
 
 }
 

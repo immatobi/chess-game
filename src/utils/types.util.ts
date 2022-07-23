@@ -333,17 +333,17 @@ export interface IAddressKyc {
 
 export interface IMessage {
     socketId: string,
-    sender: ObjectId,
-    receiver: ObjectId,
+    sender: string,
+    receiver: string,
     message: string,
     type: string,
-    chatId: ObjectId | any,
+    chatId: string,
     gameId: string
 }
 
 export interface IChatMessage {
-    sender: ObjectId,
-    receiver: ObjectId,
+    sender: string,
+    receiver: string,
     message: string
 }
 

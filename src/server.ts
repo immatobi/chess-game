@@ -1,5 +1,5 @@
 import app from './config/app.config'
-import colors from 'colors'
+import colors, { red } from 'colors'
 import { seedData } from './config/seeds/seeder.seed'
 import connectDB from './config/db.config'
 import { getMemoryStats } from './utils/memory.util'
@@ -47,7 +47,9 @@ const ioServer = new Server(server, {
     cors: {
         origin: '*',
         methods: ['GET', 'POST', 'OPTIONS', 'PUT', 'PATCH', 'DELETE']
-    }
+    },
+    transports: ['websocket', 'polling'],
+    allowEIO3: true
  });
 
 ioServer.on('connection', (socket) => {
@@ -58,14 +60,15 @@ ioServer.on('connection', (socket) => {
     // connect user
     socket.on("user-connected", async (userId: ObjectId) => {
 
-       const socketUser = await UserService.addSocketUser(socketId, userId);
+       await UserService.addSocketUser(socketId, userId);
 
         // broadcast total number of users
-        const total = await redis.fetchData(CacheKeys.TotalPlayers);
-        socket.broadcast.emit('get-total-users', parseInt(total));
+        // const total = await redis.fetchData(CacheKeys.TotalPlayers);
+        // socket.broadcast.emit('get-total-users', parseInt(total));
 
-        // emit user socket id
-        socket.emit("get-user-socket", { socketId: socketUser.data.socketId, _id: socketUser.data._id })
+        // emit all players data
+        const players = await redis.fetchData(CacheKeys.Players);
+        socket.broadcast.emit("get-all-players", players)
 
     })
 
@@ -99,7 +102,7 @@ ioServer.on('connection', (socket) => {
         if(data.type === 'private'){
 
             // publish the message first
-            await socket.to(data.receiver.toString()).emit("receive-message", {
+            await socket.to(data.socketId).emit("receive-message", {
                 sender: data.sender,
                 receiver: data.receiver,
                 message: data.message

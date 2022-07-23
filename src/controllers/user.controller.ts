@@ -19,6 +19,8 @@ dayjs.extend(customparse);
 import User from '../models/User.model'
 import Role from '../models/Role.model'
 import Chat from '../models/Chat.model';
+import redis from '../middleware/redis.mw';
+import { CacheKeys } from '../utils/cache.util';
 
 
 // @desc           Get all users

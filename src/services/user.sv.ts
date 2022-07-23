@@ -86,27 +86,7 @@ class UserService {
 
         if(user){
 
-            if(user.socketId !== ''){
-
-                user.socketId = socketId;
-                await user.save();
-
-                // cache the new user with socket id // 180 days
-                await redis.keepData({
-                    key: socketId,
-                    value: user
-                }, 15552000);
-
-            }else{
-
-                user.socketId = socketId;
-                await user.save();
-
-                // cache the new user with socket id // 180 days
-                await redis.keepData({
-                    key: socketId,
-                    value: user
-                }, 15552000);
+            if(user.socketId === ''){
 
                 // get current total 
                 const total = await redis.fetchData(CacheKeys.TotalPlayers);
@@ -118,6 +98,9 @@ class UserService {
                 }, 15552000)
 
             }
+
+            user.socketId = socketId;
+            await user.save();
 
             this.result.data = user;
 

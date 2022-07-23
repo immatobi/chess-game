@@ -4,6 +4,7 @@ export enum CacheKeys {
     Users = 'chess-game.users',
     Countries = 'chess-game.countries',
     TotalPlayers = 'chess-game.total-payers',
+    Players = 'chess-game.payers',
     GameMembers = 'chess-game.total-members'
 }
 
